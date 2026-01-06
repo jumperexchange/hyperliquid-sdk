@@ -74,6 +74,22 @@ function assertIsWalletDefined<T>(wallet: T): asserts wallet is NonNullable<T> {
     throw new Error('Wallet is not initialized');
   }
 }
+export function generateL1Action(
+  action: unknown,
+  activePool: string | null,
+  nonce: number,
+  isMainnet: boolean
+) {
+  // actionHash already normalizes the action
+  const hash = actionHash(action, activePool, nonce);
+  const phantomAgent = constructPhantomAgent(hash, isMainnet);
+  return {
+    domain: phantomDomain,
+    types: agentTypes,
+    primaryType: 'Agent',
+    message: phantomAgent,
+  };
+}
 export async function signL1Action(
   wallet: Wallet | HDNodeWallet | undefined,
   action: unknown,
@@ -82,15 +98,7 @@ export async function signL1Action(
   isMainnet: boolean
 ): Promise<Signature> {
   assertIsWalletDefined(wallet);
-  // actionHash already normalizes the action
-  const hash = actionHash(action, activePool, nonce);
-  const phantomAgent = constructPhantomAgent(hash, isMainnet);
-  const data = {
-    domain: phantomDomain,
-    types: agentTypes,
-    primaryType: 'Agent',
-    message: phantomAgent,
-  };
+  const data = generateL1Action(action, activePool, nonce, isMainnet);
   return signInner(wallet, data);
 }
 
