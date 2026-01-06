@@ -94,7 +94,7 @@ export class CustomOperations {
 
   private DEFAULT_SLIPPAGE = 0.05;
 
-  private async getSlippagePrice(
+  async getSlippagePrice(
     symbol: string,
     isBuy: boolean,
     slippage: number,
@@ -111,23 +111,20 @@ export class CustomOperations {
     //If not isSpot count how many decimals price has to use the same amount for rounding
     const decimals = px.toString().split('.')[1]?.length || 0;
 
-    console.log(decimals);
-
     px *= isBuy ? 1 + slippage : 1 - slippage;
     return Number(px.toFixed(isSpot ? 8 : Math.max(0, decimals - 1)));
   }
 
-  async marketOpen(
+  private async marketOpenRequest(
     symbol: string,
     isBuy: boolean,
     size: number,
     px?: number,
     slippage: number = this.DEFAULT_SLIPPAGE,
     cloid?: string
-  ): Promise<OrderResponse> {
+  ){
     const convertedSymbol = await this.symbolConversion.convertSymbol(symbol);
     const slippagePrice = await this.getSlippagePrice(convertedSymbol, isBuy, slippage, px);
-    console.log('Slippage Price: ', slippagePrice);
 
     const orderRequest: OrderRequest = {
       coin: convertedSymbol,
@@ -141,7 +138,34 @@ export class CustomOperations {
     if (cloid) {
       orderRequest.cloid = cloid;
     }
-    console.log(orderRequest);
+    return orderRequest
+  }
+
+  async marketOpenCalldata(
+    symbol: string,
+    isBuy: boolean,
+    size: number,
+    px?: number,
+    slippage: number = this.DEFAULT_SLIPPAGE,
+    cloid?: string
+  ): Promise<any> {
+    
+    const orderRequest = await this.marketOpenRequest(symbol, isBuy, size, px, slippage, cloid);
+
+    return this.exchange.placeOrderCalldata(orderRequest);
+  }
+
+  async marketOpen(
+    symbol: string,
+    isBuy: boolean,
+    size: number,
+    px?: number,
+    slippage: number = this.DEFAULT_SLIPPAGE,
+    cloid?: string
+  ): Promise<OrderResponse> {
+
+    const orderRequest = await this.marketOpenRequest(symbol, isBuy, size, px, slippage, cloid);
+
     return this.exchange.placeOrder(orderRequest);
   }
 

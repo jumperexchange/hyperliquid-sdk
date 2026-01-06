@@ -116,9 +116,8 @@ export class Hyperliquid {
     }
 
     // Set up authentication if private key is provided
-    if (privateKey) {
-      this.initializeWithPrivateKey(privateKey, testnet);
-    } else if (walletAddress) {
+    this.initializeExchange(privateKey, testnet);
+    if (walletAddress) {
       this._walletAddress = walletAddress;
       this.walletAddress = walletAddress;
     }
@@ -176,16 +175,16 @@ export class Hyperliquid {
       const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
       new ethers.Wallet(formattedPrivateKey); // Validate the private key
 
-      this.exchange = new ExchangeAPI(
+      this.exchange = new ExchangeAPI({
         testnet,
-        formattedPrivateKey,
-        this.info,
-        this.rateLimiter,
-        this.symbolConversion,
-        this.walletAddress,
-        this,
-        this.vaultAddress
-      );
+        privateKey: formattedPrivateKey,
+        info: this.info,
+        rateLimiter: this.rateLimiter,
+        symbolConversion: this.symbolConversion,
+        walletAddress: this.walletAddress,
+        parent: this,
+        vaultAddress: this.vaultAddress,
+      });
 
       this.custom = new CustomOperations(
         this.exchange,
@@ -215,23 +214,25 @@ export class Hyperliquid {
     });
   }
 
-  private initializeWithPrivateKey(privateKey: string, testnet: boolean = false): void {
+  private initializeExchange(privateKey: string | undefined, testnet: boolean = false): void {
     try {
-      const formattedPrivateKey = privateKey.startsWith('0x')
-        ? privateKey
-        : (`0x${privateKey}` as `0x${string}`);
-      const wallet = new ethers.Wallet(formattedPrivateKey); // Validate the private key
+      const formattedPrivateKey = privateKey 
+          ? privateKey.startsWith('0x')
+            ? privateKey
+            : (`0x${privateKey}` as `0x${string}`)
+          : undefined;
+      const wallet = formattedPrivateKey ? new ethers.Wallet(formattedPrivateKey) : undefined; 
 
-      this.exchange = new ExchangeAPI(
+      this.exchange = new ExchangeAPI({
         testnet,
-        formattedPrivateKey,
-        this.info,
-        this.rateLimiter,
-        this.symbolConversion,
-        this.walletAddress,
-        this,
-        this.vaultAddress
-      );
+        privateKey: formattedPrivateKey,
+        info: this.info,
+        rateLimiter: this.rateLimiter,
+        symbolConversion: this.symbolConversion,
+        walletAddress: this.walletAddress,
+        parent: this,
+        vaultAddress: this.vaultAddress,
+      });
       this.custom = new CustomOperations(
         this.exchange,
         this.info,
@@ -241,7 +242,7 @@ export class Hyperliquid {
       );
 
       // Initialize WebSocket payload manager if WebSocket is enabled
-      if (this.enableWs && this.subscriptions) {
+      if (this.enableWs && this.subscriptions && wallet) {
         this.wsPayloads = createWebSocketPayloadManager({
           wallet,
           isMainnet: !testnet,
@@ -328,3 +329,4 @@ export class Hyperliquid {
 export * from './types';
 export * from './utils/signing';
 export * from './types/constants';
+export * from './websocket/payload-generator';

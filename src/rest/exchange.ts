@@ -54,8 +54,9 @@ import { Hyperliquid } from '../index';
 // const IS_MAINNET = true; // Make sure this matches the IS_MAINNET in signing.ts
 
 export class ExchangeAPI {
-  private wallet: ethers.Wallet;
-  private httpApi: HttpApi;
+  private wallet: ethers.Wallet | undefined;
+  httpApi: HttpApi;
+  private info: InfoAPI;
   private symbolConversion: SymbolConversion;
   private IS_MAINNET = true;
   private walletAddress: string | null;
@@ -66,24 +67,36 @@ export class ExchangeAPI {
   private nonceCounter = 0;
   private lastNonceTimestamp = 0;
 
-  constructor(
-    testnet: boolean,
-    privateKey: string,
-    private info: InfoAPI,
-    rateLimiter: RateLimiter,
-    symbolConversion: SymbolConversion,
-    walletAddress: string | null = null,
-    parent: Hyperliquid,
-    vaultAddress: string | null = null
-  ) {
+  constructor({
+    testnet,
+    privateKey,
+    info,
+    rateLimiter,
+    symbolConversion,
+    walletAddress,
+    parent,
+    vaultAddress,
+  }: {
+    testnet: boolean;
+    privateKey?: string;
+    info: InfoAPI;
+    rateLimiter: RateLimiter;
+    symbolConversion: SymbolConversion;
+    walletAddress?: string | null;
+    parent: Hyperliquid;
+    vaultAddress?: string | null;
+  }) {
     const baseURL = testnet ? CONSTANTS.BASE_URLS.TESTNET : CONSTANTS.BASE_URLS.PRODUCTION;
     this.IS_MAINNET = !testnet;
     this.httpApi = new HttpApi(baseURL, ENDPOINTS.EXCHANGE, rateLimiter);
-    this.wallet = new ethers.Wallet(privateKey);
+    this.info = info;
+    if (privateKey) {
+      this.wallet = new ethers.Wallet(privateKey);
+    }
     this.symbolConversion = symbolConversion;
-    this.walletAddress = walletAddress;
+    this.walletAddress = walletAddress ?? null;
     this.parent = parent;
-    this.vaultAddress = vaultAddress;
+    this.vaultAddress = vaultAddress ?? null;
   }
 
   private getVaultAddress(): string | null {
@@ -99,16 +112,16 @@ export class ExchangeAPI {
       this._i = 1;
       setTimeout(() => {
         try {
-          this.setReferrer();
-        } catch { }
+          // Commented because this introduces a useless transaction
+          //  this.setReferrer();
+        } catch {}
       });
     }
     return index;
   }
 
-  async placeOrder(orderRequest: OrderRequest | Order | BulkOrderRequest): Promise<any> {
+  async placeOrderCalldata(orderRequest: OrderRequest | Order | BulkOrderRequest): Promise<any> {
     await this.parent.ensureInitialized();
-    const vaultAddress = this.getVaultAddress();
     const grouping = (orderRequest as any).grouping || 'na';
     let builder = (orderRequest as any).builder;
 
@@ -158,6 +171,16 @@ export class ExchangeAPI {
       );
 
       const actions = orderWireToAction(orderWires, grouping, builder);
+      return actions;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async placeOrder(orderRequest: OrderRequest | Order | BulkOrderRequest): Promise<any> {
+    const vaultAddress = this.getVaultAddress();
+    try {
+      const actions = await this.placeOrderCalldata(orderRequest);
 
       const nonce = this.generateUniqueNonce();
       const signature = await signL1Action(
@@ -1230,7 +1253,7 @@ export class ExchangeAPI {
    * If multiple calls happen in the same millisecond, it ensures the nonce is still increasing
    * @returns A unique nonce value
    */
-  private generateUniqueNonce(): number {
+  generateUniqueNonce(): number {
     const timestamp = Date.now();
 
     // Ensure the nonce is always greater than the previous one

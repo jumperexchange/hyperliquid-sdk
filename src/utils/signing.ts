@@ -69,13 +69,19 @@ function constructPhantomAgent(hash: string, isMainnet: boolean) {
   return { source: isMainnet ? 'a' : 'b', connectionId: hash };
 }
 
+function assertIsWalletDefined<T>(wallet: T): asserts wallet is NonNullable<T> {
+  if (!wallet) {
+    throw new Error('Wallet is not initialized');
+  }
+}
 export async function signL1Action(
-  wallet: Wallet | HDNodeWallet,
+  wallet: Wallet | HDNodeWallet | undefined,
   action: unknown,
   activePool: string | null,
   nonce: number,
   isMainnet: boolean
 ): Promise<Signature> {
+  assertIsWalletDefined(wallet);
   // actionHash already normalizes the action
   const hash = actionHash(action, activePool, nonce);
   const phantomAgent = constructPhantomAgent(hash, isMainnet);
@@ -88,14 +94,13 @@ export async function signL1Action(
   return signInner(wallet, data);
 }
 
-export async function signUserSignedAction(
-  wallet: Wallet,
+export function generateUserActionData(
   action: any,
   payloadTypes: Array<{ name: string; type: string }>,
   primaryType: string,
   isMainnet: boolean
-): Promise<Signature> {
-  const data = {
+): any {
+  return {
     domain: {
       name: 'HyperliquidSignTransaction',
       version: '1',
@@ -108,12 +113,23 @@ export async function signUserSignedAction(
     primaryType: primaryType,
     message: action,
   };
+}
+
+export async function signUserSignedAction(
+  wallet: Wallet | undefined,
+  action: any,
+  payloadTypes: Array<{ name: string; type: string }>,
+  primaryType: string,
+  isMainnet: boolean
+): Promise<Signature> {
+  assertIsWalletDefined(wallet);
+  const data = generateUserActionData(action, payloadTypes, primaryType, isMainnet);
 
   return signInner(wallet, data);
 }
 
 export async function signUsdTransferAction(
-  wallet: Wallet,
+  wallet: Wallet | undefined,
   action: any,
   isMainnet: boolean
 ): Promise<Signature> {
@@ -132,7 +148,7 @@ export async function signUsdTransferAction(
 }
 
 export async function signWithdrawFromBridgeAction(
-  wallet: Wallet,
+  wallet: Wallet | undefined,
   action: any,
   isMainnet: boolean
 ): Promise<Signature> {
@@ -151,7 +167,7 @@ export async function signWithdrawFromBridgeAction(
 }
 
 export async function signAgent(
-  wallet: Wallet,
+  wallet: Wallet | undefined,
   action: any,
   isMainnet: boolean
 ): Promise<Signature> {

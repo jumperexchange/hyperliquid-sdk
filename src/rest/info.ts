@@ -46,7 +46,7 @@ export class InfoAPI {
   public spot: SpotInfoAPI;
   public perpetuals: PerpetualsInfoAPI;
   private httpApi: HttpApi;
-  private generalAPI: GeneralInfoAPI;
+  generalAPI: GeneralInfoAPI;
   private symbolConversion: SymbolConversion;
   private parent: Hyperliquid;
 

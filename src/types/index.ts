@@ -1175,3 +1175,14 @@ export interface NoopResponse {
     type: string;
   };
 }
+
+export type FeeComputationArguments =
+  | {
+      type: 'spot';
+      isStablePair: boolean;
+    }
+  | {
+      type: 'perp';
+      deployerFeeScale: number;
+      growthMode: boolean;
+    };

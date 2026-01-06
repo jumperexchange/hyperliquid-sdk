@@ -31,6 +31,7 @@ import {
   MultiSigSigners,
   BuilderFeeApproval,
   UserOrderHistory,
+  FeeComputationArguments,
 } from '../../types';
 import { HttpApi } from '../../utils/helpers';
 import { SymbolConversion } from '../../utils/symbolConversion';
@@ -430,5 +431,74 @@ export class GeneralInfoAPI {
 
     const response = await this.httpApi.makeRequest<UserOrderHistory>(params, 20);
     return rawResponse ? response : await this.symbolConversion.convertResponse(response);
+  }
+
+  /// Fee computing logic taken from
+  /// https://hyperliquid.gitbook.io/hyperliquid-docs/trading/fees
+  private async computeTradingFeePercentage(
+    user: string,
+    isAlignedQuoteToken: boolean,
+    args: FeeComputationArguments,
+  ) {
+    const fees = await this.userFees(user);
+    const scaleIfStablePair =
+      args.type === 'spot' && args.isStablePair ? 0.2 : 1;
+    let scaleIfHip3 = 1;
+    let growthModeScale = 1;
+    let deployerShare = 0;
+    if (args.type === 'perp') {
+      scaleIfHip3 =
+        args.deployerFeeScale < 1
+          ? args.deployerFeeScale + 1
+          : args.deployerFeeScale * 2;
+      deployerShare =
+        args.deployerFeeScale < 1
+          ? args.deployerFeeScale / (1 + args.deployerFeeScale)
+          : 0.5;
+      growthModeScale = args.growthMode ? 0.1 : 1;
+    }
+
+    const makerRate =
+      args.type === 'spot' ? (fees as any).userSpotAddRate : fees.userAddRate;
+    const takerRate =
+      args.type === 'spot'
+        ? (fees as any).userSpotCrossRate
+        : fees.userCrossRate;
+    const activeReferralDiscount = Number(fees.activeReferralDiscount);
+
+    let makerPercentage = makerRate * 100 * scaleIfStablePair * growthModeScale;
+    if (makerPercentage > 0) {
+      makerPercentage *= scaleIfHip3 * (1 - activeReferralDiscount);
+    } else {
+      const makerRebateScaleIfAlignedQuoteToken = isAlignedQuoteToken
+        ? (1 - deployerShare) * 1.5 + deployerShare
+        : 1;
+      makerPercentage *= makerRebateScaleIfAlignedQuoteToken;
+    }
+
+    let takerPercentage =
+      takerRate *
+      100 *
+      scaleIfStablePair *
+      scaleIfHip3 *
+      growthModeScale *
+      (1 - activeReferralDiscount);
+    if (isAlignedQuoteToken) {
+      const takerScaleIfAlignedQuoteToken = isAlignedQuoteToken
+        ? (1 - deployerShare) * 0.8 + deployerShare
+        : 1;
+      takerPercentage *= takerScaleIfAlignedQuoteToken;
+    }
+
+    return { makerPercentage, takerPercentage };
+  }
+
+  async computeTakerFee(user: string, args: FeeComputationArguments, amount: number) {
+    const fees = await this.computeTradingFeePercentage(
+      user,
+      false, // No aligned quote token consideration for this calculation
+      args,
+    );
+    return (fees.takerPercentage / 100) * amount;
   }
 }

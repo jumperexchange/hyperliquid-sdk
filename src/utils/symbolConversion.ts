@@ -1,6 +1,6 @@
 import { HttpApi } from './helpers';
 import * as CONSTANTS from '../types/constants';
-import { MetaAndAssetCtxs, SpotMetaAndAssetCtxs } from '../types';
+import { MetaAndAssetCtxs, SpotMeta, SpotMetaAndAssetCtxs } from '../types';
 
 export class SymbolConversion {
   private assetToIndexMap: Map<string, number> = new Map();
@@ -13,6 +13,7 @@ export class SymbolConversion {
   private maxConsecutiveFailures: number = 5;
   private baseRetryDelayMs: number = 1000;
   private disableAssetMapRefresh: boolean;
+  private spotMeta: SpotMeta | null = null;
 
   constructor(
     baseURL: string,
@@ -182,6 +183,7 @@ export class SymbolConversion {
           this.exchangeToInternalNameMap.set(exchangeName, internalName);
         }
       });
+      this.spotMeta = spotMeta[0];
 
       // Reset consecutive failures counter on success
       this.consecutiveFailures = 0;
@@ -226,6 +228,22 @@ export class SymbolConversion {
     }
 
     return { perp, spot };
+  }
+
+  async getMarketInfo(marketIndex: number): Promise<any> {
+    await this.ensureInitialized();
+
+    let assetSymbol: string | undefined;
+    for (const [key, value] of this.assetToIndexMap.entries()) {
+      if (value === marketIndex) {
+        assetSymbol = key;
+        break;
+      }
+    }
+    if (!assetSymbol) {
+      throw new Error(`Market not found: ${marketIndex}`);
+    }
+    return this.spotMeta?.tokens.find(t => t.name === assetSymbol.replace('-SPOT', ''));
   }
 
   async convertSymbol(symbol: string, mode: string = '', symbolMode: string = ''): Promise<string> {
