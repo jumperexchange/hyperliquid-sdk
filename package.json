@@ -24,10 +24,10 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "prebuild": "npm run format",
+    "prebuild": "pnpm format",
     "build": "tsup",
     "test": "jest",
-    "prepare": "npm run build",
+    "prepare": "pnpm build",
     "prepare:bk": "node -e \"if (process.env.NODE_ENV !== 'production' && require('fs').existsSync('.git')) { require('child_process').execSync('npm run build', {stdio: 'inherit'}) }\"",
     "test:node": "node examples/node-test.js",
     "test:browser": "npx serve -s . -p 3000",
