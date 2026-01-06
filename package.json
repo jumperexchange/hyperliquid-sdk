@@ -1,5 +1,5 @@
 {
-  "name": "hyperliquid",
+  "name": "@jumperexchange/hyperliquid",
   "version": "1.7.8",
   "description": "SDK for Hyperliquid API",
   "main": "./dist/index.js",
@@ -78,7 +78,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nomeida/hyperliquid-api"
+    "url": "https://github.com/jumper-exchange/hyperliquid-sdk"
   },
   "engines": {
     "node": ">=16.0.0"
