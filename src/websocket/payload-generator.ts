@@ -48,7 +48,7 @@ export interface PayloadGenerationContext {
 /**
  * Configuration for all exchange methods
  */
-export const EXCHANGE_METHOD_CONFIGS: Record<string, PayloadMethodConfig> = {
+export const EXCHANGE_METHOD_CONFIGS = {
   // Order management
   placeOrder: {
     type: ExchangeType.ORDER,
@@ -331,7 +331,7 @@ export const EXCHANGE_METHOD_CONFIGS: Record<string, PayloadMethodConfig> = {
       nonce: context.generateNonce(),
     }),
   },
-};
+} satisfies Record<string, PayloadMethodConfig>;
 
 /**
  * Dynamic payload generator class
@@ -345,7 +345,7 @@ export class PayloadGenerator {
    * @param params The parameters for the method
    * @returns A signed payload ready for WebSocket POST
    */
-  async generatePayload(methodName: string, params: any): Promise<any> {
+  async generatePayload(methodName: keyof typeof EXCHANGE_METHOD_CONFIGS, params: any): Promise<any> {
     const config = EXCHANGE_METHOD_CONFIGS[methodName];
     if (!config) {
       throw new Error(`Unknown exchange method: ${methodName}`);
@@ -364,7 +364,7 @@ export class PayloadGenerator {
       const nonce = this.context.generateNonce();
 
       // Get vault address if required
-      const vaultAddress = config.requiresVaultAddress ? this.context.getVaultAddress() : null;
+      const vaultAddress = "requiresVaultAddress" in config ? this.context.getVaultAddress() : null;
 
       // Sign the action based on the signing method
       let signature: any;
@@ -404,8 +404,9 @@ export class PayloadGenerator {
           );
           break;
 
+          
         default:
-          throw new Error(`Unknown signing method: ${config.signingMethod}`);
+          assertUnreachable(config);
       }
 
       // Build the final payload
@@ -439,4 +440,8 @@ export class PayloadGenerator {
   isMethodSupported(methodName: string): boolean {
     return methodName in EXCHANGE_METHOD_CONFIGS;
   }
+}
+
+function assertUnreachable(_x: never): never {
+    throw new Error("Didn't expect to get here");
 }
