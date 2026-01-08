@@ -1,5 +1,10 @@
 # Hyperliquid API SDK
 
+This library was forked and modified from its original to allow for calldata creation instead of direct signing and broadcasting the transactions.
+
+It was published on [NPM](https://www.npmjs.com/package/@jumperexchange/hyperliquid)
+
+
 Typescript SDK to more easily interact with Hyperliquid's API
 
 All info on the Hyperliquid API can be found here: [HyperLiquid API Documentation](https://hyperliquid.gitbook.io/hyperliquid-docs)
