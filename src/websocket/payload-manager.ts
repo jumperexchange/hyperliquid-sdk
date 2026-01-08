@@ -7,7 +7,7 @@
  */
 
 import { ethers } from 'ethers';
-import { PayloadGenerator, PayloadGenerationContext } from './payload-generator';
+import { PayloadGenerator, PayloadGenerationContext, EXCHANGE_METHOD_CONFIGS } from './payload-generator';
 import { WebSocketSubscriptions } from './subscriptions';
 import { CustomOperations } from '../rest/custom';
 import { SymbolConversion } from '../utils/symbolConversion';
@@ -69,7 +69,7 @@ export class WebSocketPayloadManager {
    * @param timeout Optional timeout in milliseconds
    * @returns The response from the WebSocket POST request
    */
-  async executeMethod(methodName: string, params: any, timeout: number = 30000): Promise<any> {
+  async executeMethod(methodName: keyof typeof EXCHANGE_METHOD_CONFIGS, params: any, timeout: number = 30000): Promise<any> {
     try {
       // Generate the signed payload
       const payload = await this.payloadGenerator.generatePayload(methodName, params);
@@ -304,14 +304,14 @@ export class WebSocketPayloadManager {
    * Execute a custom method with raw parameters
    * Useful for methods not yet wrapped in convenience functions
    */
-  async executeCustomMethod(methodName: string, params: any, timeout?: number): Promise<any> {
+  async executeCustomMethod(methodName: keyof typeof EXCHANGE_METHOD_CONFIGS, params: any, timeout?: number): Promise<any> {
     return this.executeMethod(methodName, params, timeout);
   }
 
   /**
    * Generate payload without executing (for testing/debugging)
    */
-  async generatePayload(methodName: string, params: any): Promise<any> {
+  async generatePayload(methodName: keyof typeof EXCHANGE_METHOD_CONFIGS, params: any): Promise<any> {
     return this.payloadGenerator.generatePayload(methodName, params);
   }
 
