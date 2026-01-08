@@ -107,7 +107,7 @@ export function generateUserActionData(
   payloadTypes: Array<{ name: string; type: string }>,
   primaryType: string,
   isMainnet: boolean
-): any {
+) {
   return {
     domain: {
       name: 'HyperliquidSignTransaction',
@@ -191,6 +191,10 @@ export async function signAgent(
     'HyperliquidTransaction:ApproveAgent',
     isMainnet
   );
+}
+export async function signData(wallet: Wallet | HDNodeWallet | undefined, data: any) {
+    assertIsWalletDefined(wallet);
+    return signInner(wallet, data);
 }
 
 async function signInner(wallet: Wallet | HDNodeWallet, data: any): Promise<Signature> {

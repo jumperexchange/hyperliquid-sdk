@@ -12,6 +12,8 @@ import {
   signWithdrawFromBridgeAction,
   signAgent,
   removeTrailingZeros,
+  generateUserActionData,
+  signData,
 } from '../utils/signing';
 import * as CONSTANTS from '../types/constants';
 
@@ -49,7 +51,7 @@ import {
 
 import { ExchangeType, ENDPOINTS, CHAIN_IDS } from '../types/constants';
 import { SymbolConversion } from '../utils/symbolConversion';
-import { Hyperliquid } from '../index';
+import { EXCHANGE_METHOD_CONFIGS, Hyperliquid } from '../index';
 
 // const IS_MAINNET = true; // Make sure this matches the IS_MAINNET in signing.ts
 
@@ -911,9 +913,7 @@ export class ExchangeAPI {
     }
   }
 
-  async approveBuilderFee(request: ApproveBuilderFeeRequest): Promise<any> {
-    await this.parent.ensureInitialized();
-    try {
+  approveBuilderFeeCalldata(request: ApproveBuilderFeeRequest) {
       // Use timestamp for nonce to match successful request format
       const nonce = Date.now();
 
@@ -933,19 +933,23 @@ export class ExchangeAPI {
         nonce: nonce,
       };
 
+      return {
+        dataToSign: generateUserActionData(
+          action,
+          EXCHANGE_METHOD_CONFIGS.approveBuilderFee.signatureTypes,
+          EXCHANGE_METHOD_CONFIGS.approveBuilderFee.primaryType,
+          this.IS_MAINNET
+        ),
+        action
+      }
+  }
+
+  async approveBuilderFee(request: ApproveBuilderFeeRequest): Promise<any> {
+    await this.parent.ensureInitialized();
+    try {
+      const { dataToSign, action } = this.approveBuilderFeeCalldata(request);
       // Sign the action with the correct types
-      const signature = await signUserSignedAction(
-        this.wallet,
-        action,
-        [
-          { name: 'hyperliquidChain', type: 'string' },
-          { name: 'maxFeeRate', type: 'string' },
-          { name: 'builder', type: 'address' },
-          { name: 'nonce', type: 'uint64' },
-        ],
-        'HyperliquidTransaction:ApproveBuilderFee',
-        this.IS_MAINNET
-      );
+      const signature = await signData(this.wallet, dataToSign);
 
       // Create the payload with the exact same structure as successful request
       const payload = {
