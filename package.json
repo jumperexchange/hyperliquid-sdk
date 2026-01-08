@@ -1,6 +1,6 @@
 {
   "name": "@jumperexchange/hyperliquid",
-  "version": "1.7.8",
+  "version": "1.7.9",
   "description": "SDK for Hyperliquid API",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
