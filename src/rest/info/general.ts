@@ -32,6 +32,7 @@ import {
   BuilderFeeApproval,
   UserOrderHistory,
   FeeComputationArguments,
+  UserDetailsResponse,
 } from '../../types';
 import { HttpApi } from '../../utils/helpers';
 import { SymbolConversion } from '../../utils/symbolConversion';
@@ -70,6 +71,15 @@ export class GeneralInfoAPI {
     const response = await this.httpApi.makeRequest<UserOpenOrders>({
       type: InfoType.OPEN_ORDERS,
       user: user,
+    });
+    return rawResponse ? response : await this.symbolConversion.convertResponse(response);
+  }
+
+
+  async getUserDetails(user: string, rawResponse: boolean = false): Promise<UserDetailsResponse> {
+    const response = await this.httpApi.makeRequest<UserDetailsResponse>({
+      type: InfoType.USER_DETAILS,
+      user,
     });
     return rawResponse ? response : await this.symbolConversion.convertResponse(response);
   }
