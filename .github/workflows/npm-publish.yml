@@ -31,39 +31,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18.x'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-
       - name: Install dependencies
-        run: |
-          # Apply workaround for npm optional dependencies bug with Rollup
-          echo "Applying workaround for Rollup optional dependencies issue"
-          rm -rf node_modules package-lock.json
-          npm install --ignore-scripts
-
-          # Verify Rollup binary is available
-          if ! npm list @rollup/rollup-linux-x64-gnu >/dev/null 2>&1; then
-            echo "Installing Rollup Linux binary explicitly"
-            npm install @rollup/rollup-linux-x64-gnu --no-save || echo "Manual Rollup install failed"
-          fi
-
-      - name: Run tests (if any)
-        continue-on-error: true
-        run: npm test --if-present
+        uses: ./.github/actions/pnpm-install
 
       - name: Build package
-        run: npm run build
-
-      - name: Verify package contents
-        run: npm pack --dry-run
-
+        run: pnpm build
+        
       - name: Publish to NPM
-        run: | 
-          npm publish \
+        run: |
+          pnpm publish --no-git-checks --access public \
           ${{ contains(github.ref_name, 'alpha') && '--tag alpha' || contains(github.ref_name, 'beta') && '--tag beta' || '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
